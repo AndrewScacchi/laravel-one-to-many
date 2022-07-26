@@ -24,7 +24,8 @@
                         $details = $user->userDetails()->first()
                     @endphp
 
-                    @if($user->userDetails()->first())
+                    {{-- get not first! --}}
+                    @if($user->userDetails()->get())
                     <td>{{ $details ? $details->address : "no data" }}</td>
                     <td>{{ $details ? $details->phone : "no data" }}</td>
                     <td>{{ $details ? $details->birth : "no data" }}</td>
