@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Http\Controllers\Controller;
-use App\Providers\RouteServiceProvider;
 use App\Models\User;
-use Illuminate\Foundation\Auth\RegistersUsers;
+use App\Models\UserDetails;
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Auth\Events\Registered;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Auth\RegistersUsers;
 
 class RegisterController extends Controller
 {
@@ -50,9 +55,12 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         return Validator::make($data, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'name'      => ['required', 'string', 'max:255'],
+            'email'     => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password'  => ['required', 'string', 'min:8', 'confirmed'],
+            'address'   => ['string', 'max:100'],
+            'phone'     => ['string', 'max:20'],
+            'birth'     => ['date'],
         ]);
     }
 
@@ -64,10 +72,54 @@ class RegisterController extends Controller
      */
     protected function create(array $data)
     {
-        return User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-        ]);
+        //added
+        try{
+            // added DB::transaction to group multiple db action to be done together, added use ($data) to punch a hole through the function to be able to read the $data var
+            $user = DB::transaction(function() use($data) {
+                $user = User::create([
+                    'name'      => $data['name'],
+                    'email'     => $data['email'],
+                    'password'  => Hash::make($data['password']),
+                ]);
+
+                UserDetails::create([
+                    'user_id'   => $user->id, // assigning the users id as the Pkey of UserDetails
+                    'address'   => $data['address'], // to change back to 'addressError' //TEST this error
+                    'phone'     => $data['phone'],
+                    'birth'     => $data['birth'],
+                ]);
+
+                return $user;
+            });
+            return $user;
+        } catch (Exception $e) {
+            return null;
+        }
     }
+
+
+    // this function deals with errors in the code
+    public function register(Request $request)
+        {
+            $this->validator($request->all())->validate();
+            $user = $this->create($request->all());
+
+            if($user){
+                event(new Registered($user));
+
+                $this->guard()->login($user);
+
+                if ($response = $this->registered($request, $user)) {
+                    return $response;
+                }
+
+                return $request->wantsJson()
+                            ? new JsonResponse([], 201)
+                            : redirect($this->redirectPath());
+
+            } else {
+                return redirect()->route('register')->with('db-error', 'Database error, please try again');
+            }
+
+        }
 }

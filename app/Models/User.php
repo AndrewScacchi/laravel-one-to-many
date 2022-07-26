@@ -36,4 +36,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    //fx named after the other tab
+    //methods start with lowercase
+    public function userDetails(){
+        return $this->hasOne('App\Models\UserDetails'); //in the tab WITHOUT foreign key
+        //return $this->belongsTo('App\Models\User'); //in the tab WITH foreign key
+    }
 }
