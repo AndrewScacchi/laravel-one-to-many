@@ -50,7 +50,8 @@ class PostController extends Controller
      */
     public function show(Post $post)
     {
-        //
+        // if(!$post) abort(404);  //not needed with dependency injection
+        return view('admin.posts.show', compact('post'));
     }
 
     /**
@@ -61,7 +62,7 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        //
+        return view('admin.posts.edit', compact('post'));
     }
 
     /**
@@ -73,7 +74,10 @@ class PostController extends Controller
      */
     public function update(Request $request, Post $post)
     {
-        //
+        $formData = $request->all();
+        //dd($request) --> see how many data are here!
+        $post->update($formData);
+        return redirect()->route('admin.posts.show' , ['post'=> $post]);
     }
 
     /**
